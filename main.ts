@@ -4,7 +4,10 @@ class PoliticianKiller extends Phaser.Game
 {
     PLAYER_MAX_SPEED = 300;
     PLAYER_DRAG = 600;
+    PLAYER_LIVES = 5;
+    PLAYER_ACCELERATION = 500;
 
+    cursors:Phaser.CursorKeys;
     player:Phaser.Sprite;
     bullets:Phaser.Group;
     explosions:Phaser.Group;
@@ -42,11 +45,12 @@ class mainState extends Phaser.State
         super.preload();
         this.loadImages();
         this.physics.startSystem(Phaser.Physics.ARCADE);
+        if (this.game.device.desktop) {this.game.cursors = this.input.keyboard.createCursorKeys();}
     }
     loadImages()
     {
         this.load.image('wall', 'assets/PNG/Tiles/greystone.png');
-        this.load.image('player', 'assets/player.gif');
+        this.load.image('player', 'assets/player.png');
         this.load.image('red_explosion', 'assets/explosion.gif');
         this.load.image('bullet','assets/bullet.png');
 
@@ -62,7 +66,15 @@ class mainState extends Phaser.State
          this.configPLAYER();
 
     }
-    update():void {super.update();}
+    update():void
+    {
+        super.update();
+        this.physics.arcade.collide(this.game.player, this.game.walls);
+
+    }
+    //fireWhenButtonClicked() {if (this.input.activePointer.isDown) {this.fire();}};
+
+
     configMAP()
     {
         this.game.walls = this.add.group();
@@ -78,7 +90,8 @@ class mainState extends Phaser.State
     }
     configPLAYER()
     {
-        var oriol = new Player('ORIOL', 5, this.game, this.world.centerX, this.world.centerY, 'player', 0); this.game.player = this.add.existing(oriol);
+        var oriol = new Player('ORIOL', this.game.PLAYER_LIVES, this.game, this.world.centerX, this.world.centerY, 'player', 0);
+        this.game.player = this.add.existing(oriol);
     }
     configBULLETS()
     {
@@ -117,7 +130,7 @@ class Bullet extends Phaser.Sprite //AIXO SERIA COM EL GAT, LES BULLETS EXPLOTEN
     killBullet(bullet:Bullet) {bullet.kill();}
     setExplosionable(explosionable:Explosionable):void {this.explosionable = explosionable;}
 }
-interface Explosionable //INTERFICIE EXPLOSIONABLE QUE ENS OBLIGARA A FER EL OVERRIDE DE QUIN TIPUS D'EXPLOSIO ES
+interface Explosionable
 {
     checkExplosionType(x:number, y:number):void
 }
@@ -154,7 +167,21 @@ class Player extends Phaser.Sprite
         this.body.maxVelocity.setTo(this.game.PLAYER_MAX_SPEED, this.game.PLAYER_MAX_SPEED);
         this.body.collideWorldBounds = true;
         this.body.drag.setTo(this.game.PLAYER_DRAG, this.game.PLAYER_DRAG);
-        this.details.subscribe(this);
+    }
+
+    update():void
+    {
+        super.update();
+        this.rotation = this.game.physics.arcade.angleToPointer(this.game.input.activePointer);
+        if (this.game.cursors.left.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.A)) {this.game.player.body.acceleration.x = -this.game.PLAYER_ACCELERATION;}
+        else if (this.game.cursors.right.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.D)) {this.game.player.body.acceleration.x = this.game.PLAYER_ACCELERATION;}
+        else if (this.game.cursors.up.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.W)) {this.game.player.body.acceleration.y = -this.game.PLAYER_ACCELERATION;}
+        else if (this.game.cursors.down.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.S)) {this.game.player.body.acceleration.y = this.game.PLAYER_ACCELERATION;}
+        else
+        {
+            this.game.player.body.acceleration.x = 0;
+            this.game.player.body.acceleration.y = 0;
+        }
     }
 }
 
