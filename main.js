@@ -8,27 +8,22 @@ window.onload = function () { new PoliticianKiller(); };
 var PoliticianKiller = (function (_super) {
     __extends(PoliticianKiller, _super);
     function PoliticianKiller() {
-        _super.call(this, 1280, 900, Phaser.CANVAS, 'gameDiv');
+        _super.call(this, 1536, 900, Phaser.CANVAS, 'gameDiv');
         this.PLAYER_MAX_SPEED = 300;
         this.PLAYER_DRAG = 600;
         this.PLAYER_LIVES = 5;
         this.PLAYER_ACCELERATION = 500;
+        this.FIRE_RATE = 200;
+        this.TEXT_MARGIN = 50;
+        this.NEXT_FIRE = 0;
+        this.BULLET_SPEED = 600;
         this.state.add('main', mainState);
         this.state.start('main');
     }
     PoliticianKiller.prototype.explode = function (x, y) {
         var explosion = this.explosions.getFirstDead();
         if (explosion) {
-            explosion.reset(x - this.rnd.integerInRange(0, 5) + this.rnd.integerInRange(0, 5), y - this.rnd.integerInRange(0, 5) + this.rnd.integerInRange(0, 5));
-            explosion.alpha = 0.6;
-            explosion.angle = this.rnd.angle();
-            explosion.scale.setTo(this.rnd.realInRange(0.5, 0.75));
-            this.add.tween(explosion.scale).to({ x: 0, y: 0 }, 500).start();
-            var tween = this.add.tween(explosion).to({ alpha: 0 }, 500);
-            tween.onComplete.add(function () {
-                explosion.kill();
-            });
-            tween.start();
+            explosion.reset(x + 10, y - 55);
         }
     };
     return PoliticianKiller;
@@ -60,15 +55,36 @@ var mainState = (function (_super) {
         _super.prototype.create.call(this);
         this.configMAP();
         this.configPLAYER();
+        this.configBULLETSEXPLOSIONS();
     };
     mainState.prototype.update = function () {
         _super.prototype.update.call(this);
         this.physics.arcade.collide(this.game.player, this.game.walls);
+        this.physics.arcade.collide(this.game.bullets, this.game.walls, this.destroyBullet, null, this);
+        this.game.player.rotation = this.physics.arcade.angleToPointer(this.game.player, this.input.activePointer);
+        this.onMouseLeftClick();
     };
-    //fireWhenButtonClicked() {if (this.input.activePointer.isDown) {this.fire();}};
+    mainState.prototype.destroyBullet = function (bullet, wall) {
+        bullet.kill();
+        bullet.explosionable.checkExplosionType(bullet.body.x, bullet.body.y);
+    };
+    mainState.prototype.onMouseLeftClick = function () {
+        if (this.input.activePointer.isDown && this.time.now > this.game.NEXT_FIRE) {
+            var bullet = this.game.bullets.getFirstDead();
+            if (bullet) {
+                var x = this.game.player.x + (Math.cos(this.game.player.rotation) * this.game.player.width * 0.5 + 20);
+                var y = this.game.player.y + (Math.sin(this.game.player.rotation) * this.game.player.width * 0.5 + 20);
+                bullet.reset(x, y);
+                bullet.angle = this.game.player.angle;
+                var velocity = this.physics.arcade.velocityFromRotation(bullet.rotation, this.game.BULLET_SPEED);
+                bullet.body.velocity.setTo(velocity.x, velocity.y);
+                this.game.NEXT_FIRE = this.time.now + this.game.FIRE_RATE;
+            }
+        }
+    };
     mainState.prototype.configMAP = function () {
         this.game.walls = this.add.group();
-        for (var x = 0; x < 10; x++) {
+        for (var x = 0; x < 12; x++) {
             var upperWall = new Wall(this.game, x * 128, 0, 'wall', 0);
             this.game.add.existing(upperWall);
             this.game.walls.add(upperWall);
@@ -78,10 +94,12 @@ var mainState = (function (_super) {
         }
     };
     mainState.prototype.configPLAYER = function () {
-        var oriol = new Player('ORIOL', this.game.PLAYER_LIVES, this.game, this.world.centerX, this.world.centerY, 'player', 0);
+        var oriol = new Player('ORIOL', this.game.PLAYER_LIVES, this.game, +50, this.world.centerY, 'player', null);
         this.game.player = this.add.existing(oriol);
     };
-    mainState.prototype.configBULLETS = function () {
+    mainState.prototype.configBULLETSEXPLOSIONS = function () {
+        this.game.explosions = this.add.group();
+        this.game.explosions.createMultiple(50, null);
         this.game.bullets = this.add.group();
         this.game.bullets.enableBody = true;
         this.game.bullets.physicsBodyType = Phaser.Physics.ARCADE;
@@ -110,7 +128,7 @@ var Bullet = (function (_super) {
         this.scale.setTo(0.5, 0.5);
         this.checkWorldBounds = true;
         this.events.onOutOfBounds.add(this.killBullet, this);
-        this.kill();
+        this.killBullet(this);
     }
     Bullet.prototype.killBullet = function (bullet) { bullet.kill(); };
     Bullet.prototype.setExplosionable = function (explosionable) { this.explosionable = explosionable; };
@@ -146,14 +164,7 @@ var Player = (function (_super) {
     }
     Player.prototype.update = function () {
         _super.prototype.update.call(this);
-        this.rotation = this.game.physics.arcade.angleToPointer(this.game.input.activePointer);
-        if (this.game.cursors.left.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.A)) {
-            this.game.player.body.acceleration.x = -this.game.PLAYER_ACCELERATION;
-        }
-        else if (this.game.cursors.right.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.D)) {
-            this.game.player.body.acceleration.x = this.game.PLAYER_ACCELERATION;
-        }
-        else if (this.game.cursors.up.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.W)) {
+        if (this.game.cursors.up.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.W)) {
             this.game.player.body.acceleration.y = -this.game.PLAYER_ACCELERATION;
         }
         else if (this.game.cursors.down.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.S)) {
