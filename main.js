@@ -8,7 +8,7 @@ window.onload = function () { new PoliticianKiller(); };
 var PoliticianKiller = (function (_super) {
     __extends(PoliticianKiller, _super);
     function PoliticianKiller() {
-        _super.call(this, 1400, 900, Phaser.CANVAS, 'gameDiv');
+        _super.call(this, 1800, 900, Phaser.CANVAS, 'gameDiv');
         this.PLAYER_MAX_SPEED = 300;
         this.PLAYER_DRAG = 600;
         this.PLAYER_LIVES = 5;
@@ -42,6 +42,7 @@ var mainState = (function (_super) {
         this.load.image('red_explosion', 'assets/explosion-72x60.png');
         this.load.image('bullet', 'assets/bullet-32x20.png');
         this.load.image('obstacle', 'assets/stone-60x60.png');
+        this.load.image('coin', 'assets/coin-60x60.png');
         this.load.image('pablo', 'assets/pablo-50x50.png');
         //this.load.image('pedro', 'assets/pedro-50x50.png');
         //this.load.image('mariano', 'assets/mariano50x50.png');
@@ -52,12 +53,14 @@ var mainState = (function (_super) {
         this.configMAP();
         this.configPLAYER();
         this.configBULLETS();
+        this.configCOINS();
         this.configEXPLOSIONS();
         this.configPOLITICIANS();
         this.configTEXTS();
     };
     mainState.prototype.update = function () {
         _super.prototype.update.call(this);
+        this.physics.arcade.collide(this.game.coins, this.game.player, this.getCoin, null, this);
         this.physics.arcade.collide(this.game.politicians, this.game.player, this.politicianHitPlayer, null, this);
         this.physics.arcade.collide(this.game.player, this.game.walls);
         this.physics.arcade.collide(this.game.bullets, this.game.walls, this.destroyBullet, null, this);
@@ -67,11 +70,22 @@ var mainState = (function (_super) {
         this.game.player.rotation = this.physics.arcade.angleToPointer(this.game.player, this.input.activePointer);
         this.onMouseLeftClick();
     };
+    mainState.prototype.getCoin = function (player, coin) {
+        coin.kill();
+        player.SCORE += 50;
+        this.game.scoreText.setText("SCORE: " + this.game.player.SCORE);
+    };
     mainState.prototype.politicianHitPlayer = function (player, politician) {
         politician.kill();
         player.SCORE -= 10;
+        player.health -= 1;
         this.game.scoreText.setText("SCORE: " + this.game.player.SCORE);
-        //this.input.onTap.addOnce(this.restart, this);
+        this.game.livesText.setText("LIVES: " + this.game.player.health);
+        if (player.health == 0) {
+            player.kill();
+            this.game.informationText.setText("GAME OVER");
+            this.input.onTap.addOnce(this.restart, this);
+        }
     };
     mainState.prototype.restart = function () { this.game.state.restart(); };
     mainState.prototype.destroyPolitician = function (bullet, politician) {
@@ -84,6 +98,16 @@ var mainState = (function (_super) {
     mainState.prototype.destroyBullet = function (bullet, wall) {
         bullet.kill();
         bullet.explosion.doExplode(bullet.body.x, bullet.body.y);
+    };
+    mainState.prototype.configCOINS = function () {
+        this.game.coins = this.add.group();
+        this.game.coins.enableBody = true;
+        for (var x = 0; x < 20; x++) {
+            var randomX = this.game.rnd.integerInRange(50, 1500);
+            var randomY = this.game.rnd.integerInRange(200, 700);
+            var coin = new Coin(this.game, randomX, randomY, 'coin', 0);
+            this.game.coins.add(coin);
+        }
     };
     mainState.prototype.configPOLITICIANS = function () {
         this.game.politicians = this.add.group();
@@ -113,18 +137,25 @@ var mainState = (function (_super) {
     mainState.prototype.configTEXTS = function () {
         this.game.scoreText = this.add.text(50, 20, 'SCORE: ' + this.game.player.SCORE, { font: "40px Arial", fill: "#000000" });
         this.game.scoreText.fixedToCamera = true;
+        this.game.livesText = this.add.text(1600, 20, 'LIVES: ' + this.game.player.health, { font: "40px Arial", fill: "#000000" });
+        this.game.livesText.fixedToCamera = true;
+        this.game.livesText = this.add.text(this.world.centerX, this.world.centerY, '', { font: "40px Arial", fill: "#000000" });
+        this.game.livesText.fixedToCamera = true;
     };
     mainState.prototype.configMAP = function () {
+        this.game.stage.backgroundColor = "#2ECCFA";
         this.game.walls = this.add.group();
-        for (var x = 1; x < 15; x++) {
+        for (var x = 1; x < 19; x++) {
             var upperWall = new Wall(this.game, (x - 1) * 100, 0, 'upper_wall', 0);
             this.saveWall(upperWall);
             var lowerWall = new Wall(this.game, (x - 1) * 100, this.world.height - 100, 'lower_wall', 0);
             this.saveWall(lowerWall);
             if (x < 4) {
-                var obstacle = new Wall(this.game, this.world.centerX + 200, x * 200, 'obstacle', 0);
+                var obstacle = new Wall(this.game, this.world.centerX, x * 200, 'obstacle', 0);
                 this.saveWall(obstacle);
-                obstacle = new Wall(this.game, this.world.centerX - 300, x * 200, 'obstacle', 0);
+                obstacle = new Wall(this.game, this.world.centerX - 500, x * 200, 'obstacle', 0);
+                this.saveWall(obstacle);
+                obstacle = new Wall(this.game, this.world.centerX + 500, x * 200, 'obstacle', 0);
                 this.saveWall(obstacle);
             }
         }
@@ -230,10 +261,6 @@ var Player = (function (_super) {
     }
     Player.prototype.update = function () {
         _super.prototype.update.call(this);
-        /*  if (this.angle>90 && this.angle>90)
-          {
-              this.scale.x *=-1;
-          }*/
         if (this.game.cursors.left.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.A)) {
             this.game.player.body.acceleration.x = -this.game.PLAYER_ACCELERATION;
         }
@@ -252,5 +279,18 @@ var Player = (function (_super) {
         }
     };
     return Player;
+})(Phaser.Sprite);
+var Coin = (function (_super) {
+    __extends(Coin, _super);
+    function Coin(game, x, y, key, frame) {
+        _super.call(this, game, x, y, key, frame);
+        this.anchor.setTo(0.5, 0.5);
+        this.game.physics.enable(this, Phaser.Physics.ARCADE);
+    }
+    Coin.prototype.update = function () {
+        _super.prototype.update.call(this);
+        this.angle = this.angle + 1;
+    };
+    return Coin;
 })(Phaser.Sprite);
 //# sourceMappingURL=main.js.map
