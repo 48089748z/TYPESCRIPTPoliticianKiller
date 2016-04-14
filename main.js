@@ -37,9 +37,9 @@ var mainState = (function (_super) {
     };
     mainState.prototype.loadImages = function () {
         this.load.image('wall', 'assets/PNG/Tiles/greystone.png');
-        this.load.image('player', 'assets/player.png');
-        this.load.image('red_explosion', 'assets/explosion.gif');
-        this.load.image('bullet', 'assets/bullet.png');
+        this.load.image('player', 'assets/player-133x100.png');
+        this.load.image('red_explosion', 'assets/explosion-72x60.png');
+        this.load.image('bullet', 'assets/bullet-32x20.png');
         this.load.image('pablo', 'assets/pablo-50x50.png');
         //this.load.image('pedro', 'assets/pedro-50x50.png');
         //this.load.image('mariano', 'assets/mariano50x50.png');
@@ -56,19 +56,30 @@ var mainState = (function (_super) {
         _super.prototype.update.call(this);
         this.physics.arcade.collide(this.game.player, this.game.walls);
         this.physics.arcade.collide(this.game.bullets, this.game.walls, this.destroyBullet, null, this);
-        //this.physics.arcade.collide(this.game.)
+        this.physics.arcade.collide(this.game.bullets, this.game.politicians, this.destroyPolitician, null, this);
+        this.physics.arcade.collide(this.game.politicians, this.game.politicians);
+        this.physics.arcade.collide(this.game.politicians, this.game.walls);
         this.game.player.rotation = this.physics.arcade.angleToPointer(this.game.player, this.input.activePointer);
         this.onMouseLeftClick();
     };
+    mainState.prototype.destroyPolitician = function (bullet, politician) {
+        bullet.explosion.doExplode(bullet.body.x, bullet.body.y);
+        politician.kill();
+        bullet.kill();
+    };
     mainState.prototype.destroyBullet = function (bullet, wall) {
         bullet.kill();
-        bullet.explosionable.doExplode(bullet.body.x, bullet.body.y);
+        bullet.explosion.doExplode(bullet.body.x, bullet.body.y);
     };
     mainState.prototype.configPOLITICIANS = function () {
-        this.game.podemos = this.add.group();
-        for (var x = 0; x < 20; x++) {
-            var politician = new Politician(this.game, 1000, x * x, 'pablo', 0);
-            this.game.podemos.add(politician);
+        this.game.politicians = this.add.group();
+        this.game.politicians.physicsBodyType = Phaser.Physics.ARCADE;
+        this.game.politicians.enableBody = true;
+        for (var x = 0; x < 30; x++) {
+            var randomX = this.game.rnd.integerInRange(300, 1500);
+            var randomY = this.game.rnd.integerInRange(200, 700);
+            var politician = new Politician(this.game, randomX, randomY, 'pablo', 0);
+            this.game.politicians.add(politician);
         }
     };
     mainState.prototype.onMouseLeftClick = function () {
@@ -102,14 +113,16 @@ var mainState = (function (_super) {
     };
     mainState.prototype.configBULLETSEXPLOSIONS = function () {
         this.game.explosions = this.add.group();
-        this.game.explosions.createMultiple(30, null);
-        this.game.explosions.forEach(function (explosion) { explosion.loadTexture('red_explosion'); }, this);
+        this.game.explosions.enableBody = true;
+        for (var x = 0; x < 3000; x++) {
+            var explosion = new Explosion(this.game);
+            this.game.explosions.add(explosion);
+        }
         this.game.bullets = this.add.group();
         this.game.bullets.enableBody = true;
         this.game.bullets.physicsBodyType = Phaser.Physics.ARCADE;
         for (var x = 0; x < 20; x++) {
             var bullet = new Bullet(this.game, 'bullet');
-            bullet.setExplosionable(new RedExplosion(this.game));
             this.game.bullets.add(bullet);
         }
     };
@@ -128,44 +141,49 @@ var Bullet = (function (_super) {
     __extends(Bullet, _super);
     function Bullet(game, key) {
         _super.call(this, game, 0, 0, key, 0);
+        this.game = game;
+        this.explosion = new Explosion(this.game);
         this.anchor.setTo(0.5, 0.5);
         this.scale.setTo(0.5, 0.5);
         this.checkWorldBounds = true;
         this.events.onOutOfBounds.add(this.killBullet, this);
         this.alive = false;
     }
-    Bullet.prototype.killBullet = function (bullet) { bullet.kill(); };
-    Bullet.prototype.setExplosionable = function (explosionable) { this.explosionable = explosionable; };
-    return Bullet;
-})(Phaser.Sprite);
-var RedExplosion = (function (_super) {
-    __extends(RedExplosion, _super);
-    function RedExplosion(game) {
-        _super.call(this, game, 0, 0, null, 0);
-        this.game = game;
-        this.anchor.set(0.5, 0.5);
-        this.alive = false;
-    }
-    RedExplosion.prototype.doExplode = function (x, y) {
-        var explosion = this.game.explosions.getFirstDead();
-        if (explosion) {
-            explosion.reset(x - 50, y - 50);
-            var tween = this.game.add.tween(explosion).to({ alpha: 0 }, 300);
-            tween.onComplete.add(function () { explosion.kill(); });
-            tween.start();
-        }
+    Bullet.prototype.killBullet = function (bullet) {
+        bullet.kill();
     };
-    return RedExplosion;
+    return Bullet;
 })(Phaser.Sprite);
 var Politician = (function (_super) {
     __extends(Politician, _super);
     function Politician(game, x, y, key, frame) {
         _super.call(this, game, x, y, key, frame);
+        this.ENEMY_SPEED = 50;
         this.GAME = game;
         this.anchor.setTo(0.5, 0.5);
-        // this.body.angle = this.game.rnd;
+        this.game.physics.enable(this, Phaser.Physics.ARCADE);
+        this.body.collideWorldBounds = true;
+        this.body.bounce.setTo(1);
+        this.body.velocity.setTo(this.ENEMY_SPEED, this.ENEMY_SPEED);
+        this.body.angle = this.game.rnd;
     }
     return Politician;
+})(Phaser.Sprite);
+var Explosion = (function (_super) {
+    __extends(Explosion, _super);
+    function Explosion(game) {
+        _super.call(this, game, 1000, 500, 'red_explosion', 0);
+        this.game = game;
+        this.kill();
+    }
+    Explosion.prototype.doExplode = function (x, y) {
+        var deadExplosion = this.game.explosions.getFirstDead();
+        if (deadExplosion) {
+            deadExplosion.reset(x - 50, y - 50);
+            this.game.add.tween(deadExplosion).to({ alpha: 0 }, 600, Phaser.Easing.Linear.None, true);
+        }
+    };
+    return Explosion;
 })(Phaser.Sprite);
 var Player = (function (_super) {
     __extends(Player, _super);

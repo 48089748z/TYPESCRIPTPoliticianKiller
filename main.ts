@@ -16,10 +16,8 @@ class PoliticianKiller extends Phaser.Game
     bullets:Phaser.Group;
     explosions:Phaser.Group;
     walls:Phaser.Group;
-    podemos:Phaser.Group;
-    pp:Phaser.Group;
-    psoe:Phaser.Group;
-    ciudadanos:Phaser.Group;
+    politicians:Phaser.Group;
+
 
     constructor()
     {
@@ -41,9 +39,9 @@ class mainState extends Phaser.State
     loadImages()
     {
         this.load.image('wall', 'assets/PNG/Tiles/greystone.png');
-        this.load.image('player', 'assets/player.png');
-        this.load.image('red_explosion', 'assets/explosion.gif');
-        this.load.image('bullet','assets/bullet.png');
+        this.load.image('player', 'assets/player-133x100.png');
+        this.load.image('red_explosion', 'assets/explosion-72x60.png');
+        this.load.image('bullet','assets/bullet-32x20.png');
 
         this.load.image('pablo', 'assets/pablo-50x50.png');
         //this.load.image('pedro', 'assets/pedro-50x50.png');
@@ -63,23 +61,34 @@ class mainState extends Phaser.State
         super.update();
         this.physics.arcade.collide(this.game.player, this.game.walls);
         this.physics.arcade.collide(this.game.bullets, this.game.walls, this.destroyBullet, null, this);
-        //this.physics.arcade.collide(this.game.)
-
+        this.physics.arcade.collide(this.game.bullets, this.game.politicians, this.destroyPolitician, null, this);
+        this.physics.arcade.collide(this.game.politicians, this.game.politicians);
+        this.physics.arcade.collide(this.game.politicians, this.game.walls);
         this.game.player.rotation = this.physics.arcade.angleToPointer(this.game.player, this.input.activePointer);
         this.onMouseLeftClick();
+    }
+    destroyPolitician(bullet:Bullet, politician:Politician)
+    {
+        bullet.explosion.doExplode(bullet.body.x, bullet.body.y);
+        politician.kill();
+        bullet.kill();
     }
     destroyBullet(bullet:Bullet, wall:Wall)
     {
         bullet.kill();
-        bullet.explosionable.doExplode(bullet.body.x, bullet.body.y);
+        bullet.explosion.doExplode(bullet.body.x, bullet.body.y);
     }
     configPOLITICIANS()
     {
-        this.game.podemos = this.add.group();
-        for (var x=0; x<20; x++)
+        this.game.politicians = this.add.group();
+        this.game.politicians.physicsBodyType = Phaser.Physics.ARCADE;
+        this.game.politicians.enableBody = true;
+        for (var x=0; x<30; x++)
         {
-            var politician = new Politician(this.game, 1000, x*x, 'pablo', 0);
-            this.game.podemos.add(politician);
+            var randomX = this.game.rnd.integerInRange(300, 1500);
+            var randomY = this.game.rnd.integerInRange(200, 700);
+            var politician = new Politician(this.game, randomX, randomY, 'pablo', 0);
+            this.game.politicians.add(politician);
         }
 
     }
@@ -121,15 +130,19 @@ class mainState extends Phaser.State
     configBULLETSEXPLOSIONS()
     {
         this.game.explosions = this.add.group();
-        this.game.explosions.createMultiple(30, null);
-        this.game.explosions.forEach((explosion:Phaser.Sprite) => {explosion.loadTexture('red_explosion');}, this);
+        this.game.explosions.enableBody = true;
+        for (var x=0; x<3000; x++)
+        {
+            var explosion = new Explosion(this.game);
+            this.game.explosions.add(explosion);
+        }
+
         this.game.bullets = this.add.group();
         this.game.bullets.enableBody = true;
         this.game.bullets.physicsBodyType = Phaser.Physics.ARCADE;
-        for (var x=0; x<20; x++)
+        for (var x=0; x< 20; x++)
         {
             var bullet = new Bullet(this.game, 'bullet');
-            bullet.setExplosionable(new RedExplosion(this.game));
             this.game.bullets.add(bullet);
         }
     }
@@ -145,51 +158,58 @@ class Wall extends Phaser.Sprite
 }
 class Bullet extends Phaser.Sprite
 {
-    explosionable:Explosionable;
+    explosion:Explosion;
+    game:PoliticianKiller;
     constructor(game:PoliticianKiller, key:string|Phaser.RenderTexture|Phaser.BitmapData|PIXI.Texture)
     {
         super(game, 0, 0, key, 0);
+        this.game = game;
+        this.explosion = new Explosion(this.game);
         this.anchor.setTo(0.5, 0.5);
         this.scale.setTo(0.5, 0.5);
         this.checkWorldBounds = true;
         this.events.onOutOfBounds.add(this.killBullet, this);
         this.alive = false;
     }
-    killBullet(bullet:Bullet) {bullet.kill();}
-    setExplosionable(explosionable:Explosionable):void {this.explosionable = explosionable;}
-}
-interface Explosionable {doExplode(x:number, y:number):void}
-class RedExplosion extends Phaser.Sprite implements Explosionable
-{
-    game:PoliticianKiller;
-    constructor(game:PoliticianKiller)
+    killBullet(bullet:Bullet)
     {
-        super(game, 0, 0, null, 0);
-        this.game = game;
-        this.anchor.set(0.5, 0.5);
-        this.alive = false;
-    }
-    doExplode(x:number, y:number):void
-    {
-            var explosion = this.game.explosions.getFirstDead();
-            if (explosion)
-            {
-                explosion.reset(x-50, y-50);
-                var tween = this.game.add.tween(explosion).to({alpha: 0}, 300);
-                tween.onComplete.add(() => {explosion.kill();});
-                tween.start();
-            }
+        bullet.kill();
     }
 }
 class Politician extends Phaser.Sprite
 {
     GAME:PoliticianKiller;
+    ENEMY_SPEED = 50;
     constructor(game:PoliticianKiller, x:number, y:number, key:string|Phaser.RenderTexture|Phaser.BitmapData|PIXI.Texture, frame:string|number)
     {
         super(game, x, y, key, frame);
         this.GAME = game;
         this.anchor.setTo(0.5, 0.5);
-       // this.body.angle = this.game.rnd;
+        this.game.physics.enable(this, Phaser.Physics.ARCADE);
+        this.body.collideWorldBounds = true;
+        this.body.bounce.setTo(1);
+        this.body.velocity.setTo(this.ENEMY_SPEED, this.ENEMY_SPEED);
+        this.body.angle = this.game.rnd;
+    }
+}
+class Explosion extends Phaser.Sprite
+{
+    game:PoliticianKiller;
+    constructor(game:PoliticianKiller)
+    {
+        super(game, 1000, 500, 'red_explosion', 0);
+        this.game = game;
+        this.kill();
+    }
+    doExplode(x:number, y:number):void
+    {
+        var deadExplosion = this.game.explosions.getFirstDead();
+        if (deadExplosion)
+        {
+            deadExplosion.reset(x-50, y-50);
+            this.game.add.tween(deadExplosion).to( { alpha: 0 }, 600, Phaser.Easing.Linear.None, true);
+            // .onComplete.add(() => {explosion.kill();}); SI LE PONGO ESTO LO HACE MAL
+        }
     }
 }
 class Player extends Phaser.Sprite
