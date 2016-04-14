@@ -8,7 +8,7 @@ window.onload = function () { new PoliticianKiller(); };
 var PoliticianKiller = (function (_super) {
     __extends(PoliticianKiller, _super);
     function PoliticianKiller() {
-        _super.call(this, 1536, 900, Phaser.CANVAS, 'gameDiv');
+        _super.call(this, 1400, 900, Phaser.CANVAS, 'gameDiv');
         this.PLAYER_MAX_SPEED = 300;
         this.PLAYER_DRAG = 600;
         this.PLAYER_LIVES = 5;
@@ -36,10 +36,12 @@ var mainState = (function (_super) {
         }
     };
     mainState.prototype.loadImages = function () {
-        this.load.image('wall', 'assets/PNG/Tiles/greystone.png');
+        this.load.image('lower_wall', 'assets/lower_wall-100x100.png');
+        this.load.image('upper_wall', 'assets/upper_wall-100x100.png');
         this.load.image('player', 'assets/player-133x100.png');
         this.load.image('red_explosion', 'assets/explosion-72x60.png');
         this.load.image('bullet', 'assets/bullet-32x20.png');
+        this.load.image('obstacle', 'assets/stone-60x60.png');
         this.load.image('pablo', 'assets/pablo-50x50.png');
         //this.load.image('pedro', 'assets/pedro-50x50.png');
         //this.load.image('mariano', 'assets/mariano50x50.png');
@@ -49,11 +51,14 @@ var mainState = (function (_super) {
         _super.prototype.create.call(this);
         this.configMAP();
         this.configPLAYER();
-        this.configBULLETSEXPLOSIONS();
+        this.configBULLETS();
+        this.configEXPLOSIONS();
         this.configPOLITICIANS();
+        this.configTEXTS();
     };
     mainState.prototype.update = function () {
         _super.prototype.update.call(this);
+        this.physics.arcade.collide(this.game.politicians, this.game.player, this.politicianHitPlayer, null, this);
         this.physics.arcade.collide(this.game.player, this.game.walls);
         this.physics.arcade.collide(this.game.bullets, this.game.walls, this.destroyBullet, null, this);
         this.physics.arcade.collide(this.game.bullets, this.game.politicians, this.destroyPolitician, null, this);
@@ -62,7 +67,16 @@ var mainState = (function (_super) {
         this.game.player.rotation = this.physics.arcade.angleToPointer(this.game.player, this.input.activePointer);
         this.onMouseLeftClick();
     };
+    mainState.prototype.politicianHitPlayer = function (player, politician) {
+        politician.kill();
+        player.SCORE -= 10;
+        this.game.scoreText.setText("SCORE: " + this.game.player.SCORE);
+        //this.input.onTap.addOnce(this.restart, this);
+    };
+    mainState.prototype.restart = function () { this.game.state.restart(); };
     mainState.prototype.destroyPolitician = function (bullet, politician) {
+        this.game.player.SCORE += 10;
+        this.game.scoreText.setText("SCORE: " + this.game.player.SCORE);
         bullet.explosion.doExplode(bullet.body.x, bullet.body.y);
         politician.kill();
         bullet.kill();
@@ -86,8 +100,8 @@ var mainState = (function (_super) {
         if (this.input.activePointer.isDown && this.time.now > this.game.NEXT_FIRE) {
             var bullet = this.game.bullets.getFirstDead();
             if (bullet) {
-                var x = this.game.player.x + (Math.cos(this.game.player.rotation) * this.game.player.width * 0.5 + 15);
-                var y = this.game.player.y + (Math.sin(this.game.player.rotation) * this.game.player.width * 0.5 + 15);
+                var x = this.game.player.x + (Math.cos(this.game.player.rotation) * this.game.player.width * 0.3 + 3);
+                var y = this.game.player.y + (Math.sin(this.game.player.rotation) * this.game.player.width * 0.3 + 3);
                 bullet.reset(x, y);
                 bullet.angle = this.game.player.angle;
                 var velocity = this.physics.arcade.velocityFromRotation(bullet.rotation, this.game.BULLET_SPEED);
@@ -96,34 +110,48 @@ var mainState = (function (_super) {
             }
         }
     };
+    mainState.prototype.configTEXTS = function () {
+        this.game.scoreText = this.add.text(50, 20, 'SCORE: ' + this.game.player.SCORE, { font: "40px Arial", fill: "#000000" });
+        this.game.scoreText.fixedToCamera = true;
+    };
     mainState.prototype.configMAP = function () {
         this.game.walls = this.add.group();
-        for (var x = 0; x < 12; x++) {
-            var upperWall = new Wall(this.game, x * 128, 0, 'wall', 0);
-            this.game.add.existing(upperWall);
-            this.game.walls.add(upperWall);
-            var lowerWall = new Wall(this.game, x * 128, this.world.height - 128, 'wall', 0);
-            this.game.add.existing(lowerWall);
-            this.game.walls.add(lowerWall);
+        for (var x = 1; x < 15; x++) {
+            var upperWall = new Wall(this.game, (x - 1) * 100, 0, 'upper_wall', 0);
+            this.saveWall(upperWall);
+            var lowerWall = new Wall(this.game, (x - 1) * 100, this.world.height - 100, 'lower_wall', 0);
+            this.saveWall(lowerWall);
+            if (x < 4) {
+                var obstacle = new Wall(this.game, this.world.centerX + 200, x * 200, 'obstacle', 0);
+                this.saveWall(obstacle);
+                obstacle = new Wall(this.game, this.world.centerX - 300, x * 200, 'obstacle', 0);
+                this.saveWall(obstacle);
+            }
         }
+    };
+    mainState.prototype.saveWall = function (wall) {
+        this.game.add.existing(wall);
+        this.game.walls.add(wall);
     };
     mainState.prototype.configPLAYER = function () {
         var oriol = new Player('ORIOL', this.game.PLAYER_LIVES, this.game, +50, this.world.centerY, 'player', null);
         this.game.player = this.add.existing(oriol);
     };
-    mainState.prototype.configBULLETSEXPLOSIONS = function () {
-        this.game.explosions = this.add.group();
-        this.game.explosions.enableBody = true;
-        for (var x = 0; x < 3000; x++) {
-            var explosion = new Explosion(this.game);
-            this.game.explosions.add(explosion);
-        }
+    mainState.prototype.configBULLETS = function () {
         this.game.bullets = this.add.group();
         this.game.bullets.enableBody = true;
         this.game.bullets.physicsBodyType = Phaser.Physics.ARCADE;
         for (var x = 0; x < 20; x++) {
             var bullet = new Bullet(this.game, 'bullet');
             this.game.bullets.add(bullet);
+        }
+    };
+    mainState.prototype.configEXPLOSIONS = function () {
+        this.game.explosions = this.add.group();
+        this.game.explosions.enableBody = true;
+        for (var x = 0; x < 3000; x++) {
+            var explosion = new Explosion(this.game);
+            this.game.explosions.add(explosion);
         }
     };
     return mainState;
@@ -158,7 +186,7 @@ var Politician = (function (_super) {
     __extends(Politician, _super);
     function Politician(game, x, y, key, frame) {
         _super.call(this, game, x, y, key, frame);
-        this.ENEMY_SPEED = 50;
+        this.ENEMY_SPEED = 100;
         this.GAME = game;
         this.anchor.setTo(0.5, 0.5);
         this.game.physics.enable(this, Phaser.Physics.ARCADE);
@@ -179,7 +207,7 @@ var Explosion = (function (_super) {
     Explosion.prototype.doExplode = function (x, y) {
         var deadExplosion = this.game.explosions.getFirstDead();
         if (deadExplosion) {
-            deadExplosion.reset(x - 50, y - 50);
+            deadExplosion.reset(x - 30, y - 30);
             this.game.add.tween(deadExplosion).to({ alpha: 0 }, 600, Phaser.Easing.Linear.None, true);
         }
     };
@@ -189,6 +217,7 @@ var Player = (function (_super) {
     __extends(Player, _super);
     function Player(name, startingLives, game, x, y, key, frame) {
         _super.call(this, game, x, y, key, frame);
+        this.SCORE = 0;
         this.game = game;
         this.NAME = name;
         this.SCORE = 0;
@@ -201,7 +230,17 @@ var Player = (function (_super) {
     }
     Player.prototype.update = function () {
         _super.prototype.update.call(this);
-        if (this.game.cursors.up.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.W)) {
+        /*  if (this.angle>90 && this.angle>90)
+          {
+              this.scale.x *=-1;
+          }*/
+        if (this.game.cursors.left.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.A)) {
+            this.game.player.body.acceleration.x = -this.game.PLAYER_ACCELERATION;
+        }
+        else if (this.game.cursors.right.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.D)) {
+            this.game.player.body.acceleration.x = this.game.PLAYER_ACCELERATION;
+        }
+        else if (this.game.cursors.up.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.W)) {
             this.game.player.body.acceleration.y = -this.game.PLAYER_ACCELERATION;
         }
         else if (this.game.cursors.down.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.S)) {
