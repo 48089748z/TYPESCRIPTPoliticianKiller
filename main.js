@@ -23,7 +23,9 @@ var PoliticianKiller = (function (_super) {
         this.NEXT_FIRE = 0;
         this.BULLET_SPEED = 600;
         this.state.add('main', mainState);
-        this.state.start('main');
+        this.state.add("start", StartState);
+        this.state.add("menu", MenuState);
+        this.state.start('start');
     }
     return PoliticianKiller;
 })(Phaser.Game);
@@ -34,21 +36,9 @@ var mainState = (function (_super) {
     }
     mainState.prototype.preload = function () {
         _super.prototype.preload.call(this);
-        this.loadImages();
-        this.physics.startSystem(Phaser.Physics.ARCADE);
         if (this.game.device.desktop) {
             this.game.cursors = this.input.keyboard.createCursorKeys();
         }
-    };
-    mainState.prototype.loadImages = function () {
-        this.load.image('lower_wall', 'assets/lower_wall-100x100.png');
-        this.load.image('upper_wall', 'assets/upper_wall-100x100.png');
-        this.load.image('player', 'assets/player-133x100.png');
-        this.load.image('red_explosion', 'assets/explosion-72x60.png');
-        this.load.image('bullet', 'assets/bullet-32x20.png');
-        this.load.image('obstacle', 'assets/stone-60x60.png');
-        this.load.image('coin', 'assets/coin-60x60.png');
-        this.load.image('pablo', 'assets/pablo-50x50.png');
     };
     mainState.prototype.create = function () {
         _super.prototype.create.call(this);
@@ -64,7 +54,7 @@ var mainState = (function (_super) {
         _super.prototype.update.call(this);
         if (this.game.politicians.countLiving() == 0) {
             this.game.LEVEL += 1;
-            this.restart();
+            this.newLevel();
         }
         this.physics.arcade.collide(this.game.coins, this.game.player, this.getCoin, null, this);
         this.physics.arcade.collide(this.game.politicians, this.game.player, this.politicianHitPlayer, null, this);
@@ -91,11 +81,23 @@ var mainState = (function (_super) {
         this.game.livesText.setText("LIVES: " + this.game.player.health);
         if (player.health == 0) {
             player.kill();
-            this.game.informationText.setText("GAME OVER");
-            this.input.onTap.addOnce(this.restart, this);
+            this.game.informationText.setText("GAME OVER\nCLICK TO RESTART");
+            this.input.onTap.addOnce(this.finishGame, this);
         }
     };
-    mainState.prototype.restart = function () { this.game.state.restart(); };
+    mainState.prototype.finishGame = function () {
+        this.game.LEVEL = 1;
+        this.game.state.restart();
+    };
+    mainState.prototype.newLevel = function () {
+        var highScore = localStorage.getItem("highScore");
+        if (highScore == null || highScore < this.game.SCORE) {
+            localStorage.setItem("highScore", this.game.SCORE.toString());
+            localStorage.setItem("highUser", this.game.player.NAME);
+        }
+        this.game.state.restart();
+        // this.game.LEVEL = 1;
+    };
     mainState.prototype.destroyPolitician = function (bullet, politician) {
         this.game.SCORE += 10;
         this.game.TOTAL_KILLED += 1;
@@ -153,6 +155,9 @@ var mainState = (function (_super) {
         this.game.levelText = this.add.text(this.world.centerX, 35, "LEVEL: " + this.game.LEVEL + "        Level Enemies: " + this.game.LEVEL * 10 + "     Level Coins: " + this.game.LEVEL * 3 + "\n                     Killed Enemies: " + this.game.TOTAL_KILLED + "     Taken Coins: " + this.game.TAKEN_COINS, { font: "20px Arial", fill: "#000000" });
         this.game.levelText.anchor.setTo(0.5, 0.5);
         this.game.levelText.fixedToCamera = true;
+        this.game.highestScoreText = this.add.text(this.world.centerX, this.world.height - 30, "HIGHEST SCORE: " + localStorage.getItem("highScore") + " by " + localStorage.getItem("highUser"), { font: "50px Arial", fill: "#000000" });
+        this.game.highestScoreText.anchor.setTo(0.5, 0.5);
+        this.game.highestScoreText.fixedToCamera = true;
     };
     mainState.prototype.configMAP = function () {
         switch (this.game.LEVEL) {
@@ -206,8 +211,8 @@ var mainState = (function (_super) {
         this.game.walls.add(wall);
     };
     mainState.prototype.configPLAYER = function () {
-        var antibolivariano = new Player('EDUARDO INDA', this.game.PLAYER_LIVES, this.game, +50, this.world.centerY, 'player', null);
-        this.game.player = this.add.existing(antibolivariano);
+        var player = new Player(localStorage.getItem("username").toString(), this.game.PLAYER_LIVES, this.game, +50, this.world.centerY, 'player', null);
+        this.game.player = this.add.existing(player);
     };
     mainState.prototype.configBULLETS = function () {
         this.game.bullets = this.add.group();
@@ -333,4 +338,49 @@ var Coin = (function (_super) {
     };
     return Coin;
 })(Phaser.Sprite);
+var MenuState = (function (_super) {
+    __extends(MenuState, _super);
+    function MenuState() {
+        _super.apply(this, arguments);
+    }
+    MenuState.prototype.preload = function () {
+        _super.prototype.preload.call(this);
+        var loadingText = this.add.text(this.world.centerX, this.world.centerY - 100, 'LOADING ...', { font: '50px Arial', fill: '#000000' });
+        loadingText.anchor.setTo(0.5, 0.5);
+        var loading = this.add.sprite(this.world.centerX, this.world.centerY, 'loading');
+        loading.anchor.setTo(0.5, 0.5);
+        this.load.image('lower_wall', 'assets/lower_wall-100x100.png');
+        this.load.image('upper_wall', 'assets/upper_wall-100x100.png');
+        this.load.image('player', 'assets/player-133x100.png');
+        this.load.image('red_explosion', 'assets/explosion-72x60.png');
+        this.load.image('bullet', 'assets/bullet-32x20.png');
+        this.load.image('obstacle', 'assets/stone-60x60.png');
+        this.load.image('coin', 'assets/coin-60x60.png');
+        this.load.image('pablo', 'assets/pablo-50x50.png');
+        this.physics.startSystem(Phaser.Physics.ARCADE);
+    };
+    MenuState.prototype.create = function () {
+        _super.prototype.create.call(this);
+        var playerUsername = prompt("Please enter your Username");
+        localStorage.setItem("username", playerUsername);
+        this.game.state.start('main');
+    };
+    return MenuState;
+})(Phaser.State);
+var StartState = (function (_super) {
+    __extends(StartState, _super);
+    function StartState() {
+        _super.apply(this, arguments);
+    }
+    StartState.prototype.preload = function () {
+        _super.prototype.preload.call(this);
+        this.load.image('loading', 'assets/loading-436x140.png');
+    };
+    StartState.prototype.create = function () {
+        _super.prototype.create.call(this);
+        this.stage.backgroundColor = "#ffffff";
+        this.game.state.start('menu');
+    };
+    return StartState;
+})(Phaser.State);
 //# sourceMappingURL=main.js.map

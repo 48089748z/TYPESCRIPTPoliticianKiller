@@ -16,6 +16,7 @@ class PoliticianKiller extends Phaser.Game
     NEXT_FIRE = 0;
     BULLET_SPEED = 600;
 
+    highestScoreText:Phaser.Text;
     scoreText:Phaser.Text;
     levelText:Phaser.Text;
     livesText:Phaser.Text;
@@ -31,7 +32,9 @@ class PoliticianKiller extends Phaser.Game
     {
         super(1800, 900, Phaser.CANVAS, 'gameDiv');
         this.state.add('main', mainState);
-        this.state.start('main');
+        this.state.add("start", StartState);
+        this.state.add("menu", MenuState);
+        this.state.start('start');
     }
 }
 class mainState extends Phaser.State
@@ -40,20 +43,7 @@ class mainState extends Phaser.State
     preload():void
     {
         super.preload();
-        this.loadImages();
-        this.physics.startSystem(Phaser.Physics.ARCADE);
         if (this.game.device.desktop) {this.game.cursors = this.input.keyboard.createCursorKeys();}
-    }
-    loadImages()
-    {
-        this.load.image('lower_wall', 'assets/lower_wall-100x100.png');
-        this.load.image('upper_wall', 'assets/upper_wall-100x100.png' )
-        this.load.image('player', 'assets/player-133x100.png');
-        this.load.image('red_explosion', 'assets/explosion-72x60.png');
-        this.load.image('bullet','assets/bullet-32x20.png');
-        this.load.image('obstacle', 'assets/stone-60x60.png');
-        this.load.image('coin', 'assets/coin-60x60.png');
-        this.load.image('pablo', 'assets/pablo-50x50.png');
     }
     create():void
     {
@@ -72,7 +62,7 @@ class mainState extends Phaser.State
         if (this.game.politicians.countLiving()==0)
         {
             this.game.LEVEL +=1;
-            this.restart();
+            this.newLevel();
         }
         this.physics.arcade.collide(this.game.coins, this.game.player, this.getCoin, null, this);
         this.physics.arcade.collide(this.game.politicians, this.game.player, this.politicianHitPlayer, null, this);
@@ -102,11 +92,26 @@ class mainState extends Phaser.State
         if (player.health==0)
         {
             player.kill();
-            this.game.informationText.setText("GAME OVER");
-            this.input.onTap.addOnce(this.restart, this);
+            this.game.informationText.setText("GAME OVER\nCLICK TO RESTART");
+            this.input.onTap.addOnce(this.finishGame, this);
         }
     }
-    restart() {this.game.state.restart();}
+    finishGame()
+    {
+        this.game.LEVEL = 1;
+        this.game.state.restart();
+    }
+    newLevel()
+    {
+        var highScore = localStorage.getItem("highScore");
+        if (highScore == null || highScore<this.game.SCORE)
+        {
+            localStorage.setItem("highScore", this.game.SCORE.toString());
+            localStorage.setItem("highUser", this.game.player.NAME);
+        }
+        this.game.state.restart();
+       // this.game.LEVEL = 1;
+    }
     destroyPolitician(bullet:Bullet, politician:Politician)
     {
         this.game.SCORE +=10;
@@ -176,6 +181,9 @@ class mainState extends Phaser.State
         this.game.levelText = this.add.text(this.world.centerX, 35, "LEVEL: "+this.game.LEVEL+"        Level Enemies: "+this.game.LEVEL*10+"     Level Coins: "+this.game.LEVEL*3+"\n                     Killed Enemies: " +this.game.TOTAL_KILLED+"     Taken Coins: "+this.game.TAKEN_COINS, {font: "20px Arial", fill: "#000000"});
         this.game.levelText.anchor.setTo(0.5, 0.5);
         this.game.levelText.fixedToCamera = true;
+        this.game.highestScoreText = this.add.text(this.world.centerX, this.world.height - 30, "HIGHEST SCORE: "+localStorage.getItem("highScore")+" by "+localStorage.getItem("highUser"), {font: "50px Arial", fill: "#000000"});
+        this.game.highestScoreText.anchor.setTo(0.5, 0.5);
+        this.game.highestScoreText.fixedToCamera = true;
     }
     configMAP()
     {
@@ -215,8 +223,8 @@ class mainState extends Phaser.State
 
     configPLAYER()
     {
-        var antibolivariano = new Player('EDUARDO INDA', this.game.PLAYER_LIVES, this.game, +50, this.world.centerY, 'player', null);
-        this.game.player = this.add.existing(antibolivariano);
+        var player = new Player(localStorage.getItem("username").toString(), this.game.PLAYER_LIVES, this.game, +50, this.world.centerY, 'player', null);
+        this.game.player = this.add.existing(player);
     }
     configBULLETS()
     {
@@ -347,6 +355,47 @@ class Coin extends Phaser.Sprite
     {
         super.update();
         this.angle = this.angle+1;
+    }
+}
+class MenuState extends Phaser.State //STATE TO SHOW THE LOADING BAR, LOADING IMAGES AND GETTING USERNAME
+{
+    preload():void
+    {
+        super.preload();
+        var loadingText = this.add.text(this.world.centerX, this.world.centerY - 100, 'LOADING ...', {font: '50px Arial', fill: '#000000'});
+        loadingText.anchor.setTo(0.5, 0.5);
+        var loading = this.add.sprite(this.world.centerX, this.world.centerY, 'loading');
+        loading.anchor.setTo(0.5, 0.5);
+        this.load.image('lower_wall', 'assets/lower_wall-100x100.png');
+        this.load.image('upper_wall', 'assets/upper_wall-100x100.png' )
+        this.load.image('player', 'assets/player-133x100.png');
+        this.load.image('red_explosion', 'assets/explosion-72x60.png');
+        this.load.image('bullet','assets/bullet-32x20.png');
+        this.load.image('obstacle', 'assets/stone-60x60.png');
+        this.load.image('coin', 'assets/coin-60x60.png');
+        this.load.image('pablo', 'assets/pablo-50x50.png');
+        this.physics.startSystem(Phaser.Physics.ARCADE);
+    }
+    create():void
+    {
+        super.create();
+        var playerUsername = prompt("Please enter your Username");
+        localStorage.setItem("username", playerUsername);
+        this.game.state.start('main');
+    }
+}
+class StartState extends Phaser.State //STATE TO PRELOAD THE LOADING BAR
+{
+    preload():void
+    {
+        super.preload();
+        this.load.image('loading', 'assets/loading-436x140.png');
+    }
+    create():void
+    {
+        super.create();
+        this.stage.backgroundColor = "#ffffff";
+        this.game.state.start('menu');
     }
 }
 
