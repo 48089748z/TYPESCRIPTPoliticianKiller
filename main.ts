@@ -16,7 +16,6 @@ class PoliticianKiller extends Phaser.Game
     NEXT_FIRE = 0;
     BULLET_SPEED = 600;
 
-    totalKilledText:Phaser.Text;
     scoreText:Phaser.Text;
     levelText:Phaser.Text;
     livesText:Phaser.Text;
