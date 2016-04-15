@@ -31,9 +31,9 @@ class PoliticianKiller extends Phaser.Game
     constructor()
     {
         super(1800, 900, Phaser.CANVAS, 'gameDiv');
-        this.state.add('main', mainState);
         this.state.add("start", StartState);
         this.state.add("menu", MenuState);
+        this.state.add('main', mainState);
         this.state.start('start');
     }
 }

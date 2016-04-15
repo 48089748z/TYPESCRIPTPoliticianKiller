@@ -22,9 +22,9 @@ var PoliticianKiller = (function (_super) {
         this.TEXT_MARGIN = 50;
         this.NEXT_FIRE = 0;
         this.BULLET_SPEED = 600;
-        this.state.add('main', mainState);
         this.state.add("start", StartState);
         this.state.add("menu", MenuState);
+        this.state.add('main', mainState);
         this.state.start('start');
     }
     return PoliticianKiller;
