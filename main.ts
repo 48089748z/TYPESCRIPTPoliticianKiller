@@ -2,16 +2,23 @@
 window.onload = () => {new PoliticianKiller();};
 class PoliticianKiller extends Phaser.Game
 {
-    PLAYER_MAX_SPEED = 300;
-    PLAYER_DRAG = 600;
-    PLAYER_LIVES = 5;
+    LEVEL = 1;
+    SCORE = 0;
+    TOTAL_KILLED = 0;
+    TAKEN_COINS = 0;
+    PLAYER_MAX_VELOCITY = 600;
+    PLAYER_VELOCITY = 400;
+    PLAYER_DRAG = 300;
+    PLAYER_LIVES = 3;
     PLAYER_ACCELERATION = 500;
     FIRE_RATE = 200;
     TEXT_MARGIN = 50;
     NEXT_FIRE = 0;
     BULLET_SPEED = 600;
 
+    totalKilledText:Phaser.Text;
     scoreText:Phaser.Text;
+    levelText:Phaser.Text;
     livesText:Phaser.Text;
     informationText:Phaser.Text;
     cursors:Phaser.CursorKeys;
@@ -21,8 +28,6 @@ class PoliticianKiller extends Phaser.Game
     walls:Phaser.Group;
     politicians:Phaser.Group;
     coins:Phaser.Group;
-
-
     constructor()
     {
         super(1800, 900, Phaser.CANVAS, 'gameDiv');
@@ -48,12 +53,8 @@ class mainState extends Phaser.State
         this.load.image('red_explosion', 'assets/explosion-72x60.png');
         this.load.image('bullet','assets/bullet-32x20.png');
         this.load.image('obstacle', 'assets/stone-60x60.png');
-
         this.load.image('coin', 'assets/coin-60x60.png');
         this.load.image('pablo', 'assets/pablo-50x50.png');
-        //this.load.image('pedro', 'assets/pedro-50x50.png');
-        //this.load.image('mariano', 'assets/mariano50x50.png');
-        //this.load.image('albert', 'assets/albert50x50.png');
     }
     create():void
     {
@@ -69,6 +70,11 @@ class mainState extends Phaser.State
     update():void
     {
         super.update();
+        if (this.game.politicians.countLiving()==0)
+        {
+            this.game.LEVEL +=1;
+            this.restart();
+        }
         this.physics.arcade.collide(this.game.coins, this.game.player, this.getCoin, null, this);
         this.physics.arcade.collide(this.game.politicians, this.game.player, this.politicianHitPlayer, null, this);
         this.physics.arcade.collide(this.game.player, this.game.walls);
@@ -77,20 +83,22 @@ class mainState extends Phaser.State
         this.physics.arcade.collide(this.game.politicians, this.game.politicians);
         this.physics.arcade.collide(this.game.politicians, this.game.walls);
         this.game.player.rotation = this.physics.arcade.angleToPointer(this.game.player, this.input.activePointer);
+        this.game.levelText.setText("LEVEL: "+this.game.LEVEL+"        Level Enemies: "+this.game.LEVEL*10+"     Level Coins: "+this.game.LEVEL*3+"\n                     Killed Enemies: " +this.game.TOTAL_KILLED+"     Taken Coins: "+this.game.TAKEN_COINS);
         this.onMouseLeftClick();
     }
     getCoin(player:Player, coin:Coin)
     {
         coin.kill();
-        player.SCORE +=50;
-        this.game.scoreText.setText("SCORE: "+this.game.player.SCORE);
+        this.game.SCORE +=20;
+        this.game.TAKEN_COINS +=1;
+        this.game.scoreText.setText("PLAYER: "+this.game.player.NAME +"\nSCORE: "+this.game.SCORE);
     }
     politicianHitPlayer(player:Player, politician:Politician)
     {
         politician.kill();
-        player.SCORE -= 10;
+        this.game.SCORE -= 100;
         player.health -=1;
-        this.game.scoreText.setText("SCORE: "+this.game.player.SCORE)
+        this.game.scoreText.setText("PLAYER: "+this.game.player.NAME +"\nSCORE: "+this.game.SCORE);
         this.game.livesText.setText("LIVES: "+this.game.player.health);
         if (player.health==0)
         {
@@ -102,8 +110,9 @@ class mainState extends Phaser.State
     restart() {this.game.state.restart();}
     destroyPolitician(bullet:Bullet, politician:Politician)
     {
-        this.game.player.SCORE +=10;
-        this.game.scoreText.setText("SCORE: "+this.game.player.SCORE);
+        this.game.SCORE +=10;
+        this.game.TOTAL_KILLED +=1;
+        this.game.scoreText.setText("PLAYER: "+this.game.player.NAME +"\nSCORE: "+this.game.SCORE);
         bullet.explosion.doExplode(bullet.body.x, bullet.body.y);
         politician.kill();
         bullet.kill();
@@ -117,7 +126,7 @@ class mainState extends Phaser.State
     {
         this.game.coins = this.add.group();
         this.game.coins.enableBody = true;
-        for (var x=0; x<20; x++)
+        for (var x=0; x<this.game.LEVEL*3; x++)
         {
             var randomX = this.game.rnd.integerInRange(50, 1500);
             var randomY = this.game.rnd.integerInRange(200, 700);
@@ -131,7 +140,7 @@ class mainState extends Phaser.State
         this.game.politicians = this.add.group();
         this.game.politicians.physicsBodyType = Phaser.Physics.ARCADE;
         this.game.politicians.enableBody = true;
-        for (var x=0; x<30; x++)
+        for (var x=0; x<this.game.LEVEL*10; x++)
         {
             var randomX = this.game.rnd.integerInRange(300, 1500);
             var randomY = this.game.rnd.integerInRange(200, 700);
@@ -159,16 +168,28 @@ class mainState extends Phaser.State
     }
     configTEXTS()
     {
-        this.game.scoreText = this.add.text(50, 20, 'SCORE: '+this.game.player.SCORE, {font: "40px Arial", fill: "#000000"});
+        this.game.scoreText = this.add.text(50, 0, 'PLAYER: '+this.game.player.NAME +'\nSCORE: '+this.game.SCORE, {font: "30px Arial", fill: "#000000"});
         this.game.scoreText.fixedToCamera = true;
-        this.game.livesText = this.add.text(1600, 20, 'LIVES: '+this.game.player.health, {font: "40px Arial", fill: "#000000"});
+        this.game.livesText = this.add.text(1600, 20, 'LIVES: '+this.game.player.health, {font: "30px Arial", fill: "#000000"});
         this.game.livesText.fixedToCamera = true;
-        this.game.livesText = this.add.text(this.world.centerX, this.world.centerY, '', {font: "40px Arial", fill: "#000000"});
-        this.game.livesText.fixedToCamera = true;
+        this.game.informationText = this.add.text(this.world.centerX, this.world.centerY, '', {font: "130px Arial", fill: "#000000"});
+        this.game.informationText.anchor.setTo(0.5, 0.5);
+        this.game.levelText = this.add.text(this.world.centerX, 35, "LEVEL: "+this.game.LEVEL+"        Level Enemies: "+this.game.LEVEL*10+"     Level Coins: "+this.game.LEVEL*3+"\n                     Killed Enemies: " +this.game.TOTAL_KILLED+"     Taken Coins: "+this.game.TAKEN_COINS, {font: "20px Arial", fill: "#000000"});
+        this.game.levelText.anchor.setTo(0.5, 0.5);
+        this.game.levelText.fixedToCamera = true;
     }
     configMAP()
     {
-        this.game.stage.backgroundColor = "#2ECCFA";
+        switch (this.game.LEVEL)
+        {
+            case 1:{this.game.stage.backgroundColor = "#FFFFFF";break;}
+            case 2:{this.game.stage.backgroundColor = "#FFF700";break;}
+            case 3:{this.game.stage.backgroundColor = "#89FF00";break;}
+            case 4:{this.game.stage.backgroundColor = "#00FCFF";break;}
+            case 5:{this.game.stage.backgroundColor = "#FF00C4";break;}
+            case 6:{this.game.stage.backgroundColor = "#FF0000";break;}
+            default: {this.game.stage.backgroundColor = "#6E6E6E"; break;}
+        }
         this.game.walls = this.add.group();
         for (var x=1; x<19; x++)
         {
@@ -176,7 +197,7 @@ class mainState extends Phaser.State
             this.saveWall(upperWall);
             var lowerWall = new Wall(this.game, (x-1)*100, this.world.height-100, 'lower_wall', 0);
             this.saveWall(lowerWall);
-            if (x<4)
+            if (x<this.game.LEVEL)
             {
                 var obstacle = new Wall(this.game,  this.world.centerX, x*200, 'obstacle',0);
                 this.saveWall(obstacle);
@@ -193,18 +214,17 @@ class mainState extends Phaser.State
         this.game.walls.add(wall);
     }
 
-
     configPLAYER()
     {
-        var oriol = new Player('ORIOL', this.game.PLAYER_LIVES, this.game, +50, this.world.centerY, 'player', null);
-        this.game.player = this.add.existing(oriol);
+        var antibolivariano = new Player('EDUARDO INDA', this.game.PLAYER_LIVES, this.game, +50, this.world.centerY, 'player', null);
+        this.game.player = this.add.existing(antibolivariano);
     }
     configBULLETS()
     {
         this.game.bullets = this.add.group();
         this.game.bullets.enableBody = true;
         this.game.bullets.physicsBodyType = Phaser.Physics.ARCADE;
-        for (var x=0; x< 20; x++)
+        for (var x=0; x< 30; x++)
         {
             var bullet = new Bullet(this.game, 'bullet');
             this.game.bullets.add(bullet);
@@ -289,18 +309,17 @@ class Explosion extends Phaser.Sprite
 class Player extends Phaser.Sprite
 {
     game:PoliticianKiller;
-    SCORE:number=0;
     NAME:string;
     constructor(name:string, startingLives:number, game:PoliticianKiller, x:number, y:number, key:string|Phaser.RenderTexture|Phaser.BitmapData|PIXI.Texture, frame:string|number)
     {
         super(game, x, y, key, frame);
         this.game = game;
         this.NAME = name;
-        this.SCORE = 0;
         this.anchor.setTo(0.5, 0.5);
         this.health = startingLives;
         this.game.physics.enable(this, Phaser.Physics.ARCADE);
-        this.body.maxVelocity.setTo(this.game.PLAYER_MAX_SPEED, this.game.PLAYER_MAX_SPEED);
+        this.body.velocity.setTo(this.game.PLAYER_VELOCITY, this.game.PLAYER_VELOCITY);
+        this.body.maxVelocity.setTo(this.game.PLAYER_MAX_VELOCITY,this.game.PLAYER_MAX_VELOCITY);
         this.body.collideWorldBounds = true;
         this.body.drag.setTo(this.game.PLAYER_DRAG, this.game.PLAYER_DRAG);
     }
