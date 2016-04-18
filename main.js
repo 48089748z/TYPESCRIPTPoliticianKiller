@@ -88,16 +88,19 @@ var mainState = (function (_super) {
     mainState.prototype.finishGame = function () {
         this.game.LEVEL = 1;
         this.game.SCORE = 0;
+        this.checkIfHighScore();
         this.game.state.restart();
     };
     mainState.prototype.newLevel = function () {
+        this.checkIfHighScore();
+        this.game.state.restart();
+    };
+    mainState.prototype.checkIfHighScore = function () {
         var highScore = localStorage.getItem("highScore");
         if (highScore == null || highScore < this.game.SCORE) {
             localStorage.setItem("highScore", this.game.SCORE.toString());
             localStorage.setItem("highUser", this.game.player.NAME);
         }
-        this.game.state.restart();
-        // this.game.LEVEL = 1;
     };
     mainState.prototype.destroyPolitician = function (bullet, politician) {
         this.game.SCORE += 10;
@@ -255,9 +258,7 @@ var Bullet = (function (_super) {
         this.events.onOutOfBounds.add(this.killBullet, this);
         this.alive = false;
     }
-    Bullet.prototype.killBullet = function (bullet) {
-        bullet.kill();
-    };
+    Bullet.prototype.killBullet = function (bullet) { bullet.kill(); };
     return Bullet;
 })(Phaser.Sprite);
 var Politician = (function (_super) {

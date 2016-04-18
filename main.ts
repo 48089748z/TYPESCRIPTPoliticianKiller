@@ -100,9 +100,15 @@ class mainState extends Phaser.State
     {
         this.game.LEVEL = 1;
         this.game.SCORE = 0;
+        this.checkIfHighScore();
         this.game.state.restart();
     }
     newLevel()
+    {
+        this.checkIfHighScore();
+        this.game.state.restart();
+    }
+    checkIfHighScore()
     {
         var highScore = localStorage.getItem("highScore");
         if (highScore == null || highScore<this.game.SCORE)
@@ -110,8 +116,6 @@ class mainState extends Phaser.State
             localStorage.setItem("highScore", this.game.SCORE.toString());
             localStorage.setItem("highUser", this.game.player.NAME);
         }
-        this.game.state.restart();
-       // this.game.LEVEL = 1;
     }
     destroyPolitician(bullet:Bullet, politician:Politician)
     {
@@ -138,7 +142,6 @@ class mainState extends Phaser.State
             var coin = new Coin(this.game, randomX, randomY, 'coin', 0);
             this.game.coins.add(coin);
         }
-
     }
     configPOLITICIANS()
     {
@@ -152,7 +155,6 @@ class mainState extends Phaser.State
             var politician = new Politician(this.game, randomX, randomY, 'pablo', 0);
             this.game.politicians.add(politician);
         }
-
     }
     onMouseLeftClick()
     {
@@ -221,7 +223,6 @@ class mainState extends Phaser.State
         this.game.add.existing(wall);
         this.game.walls.add(wall);
     }
-
     configPLAYER()
     {
         var player = new Player(localStorage.getItem("username").toString(), this.game.PLAYER_LIVES, this.game, +50, this.world.centerY, 'player', null);
@@ -273,10 +274,7 @@ class Bullet extends Phaser.Sprite
         this.events.onOutOfBounds.add(this.killBullet, this);
         this.alive = false;
     }
-    killBullet(bullet:Bullet)
-    {
-        bullet.kill();
-    }
+    killBullet(bullet:Bullet) {bullet.kill();}
 }
 class Politician extends Phaser.Sprite
 {
@@ -310,7 +308,7 @@ class Explosion extends Phaser.Sprite
         {
             deadExplosion.reset(x-30, y-30);
             this.game.add.tween(deadExplosion).to( { alpha: 0 }, 600, Phaser.Easing.Linear.None, true);
-            // .onComplete.add(() => {explosion.kill();}); SI LE PONGO ESTO LO HACE MAL
+            // .onComplete.add(() => {explosion.kill();}); SI LE PONGO ESTO LO HACE MAL, POR ESO CREO 3000 BULLETS
         }
     }
 }
@@ -338,11 +336,7 @@ class Player extends Phaser.Sprite
         else if (this.game.cursors.right.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.D)) {this.game.player.body.acceleration.x = this.game.PLAYER_ACCELERATION;}
         else if (this.game.cursors.up.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.W)) {this.game.player.body.acceleration.y = -this.game.PLAYER_ACCELERATION;}
         else if (this.game.cursors.down.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.S)) {this.game.player.body.acceleration.y = this.game.PLAYER_ACCELERATION;}
-        else
-        {
-            this.game.player.body.acceleration.x = 0;
-            this.game.player.body.acceleration.y = 0;
-        }
+        else {this.game.player.body.acceleration.x = 0; this.game.player.body.acceleration.y = 0;}
     }
 }
 class Coin extends Phaser.Sprite
