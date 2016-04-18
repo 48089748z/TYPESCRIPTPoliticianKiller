@@ -99,6 +99,7 @@ class mainState extends Phaser.State
     finishGame()
     {
         this.game.LEVEL = 1;
+        this.game.SCORE = 0;
         this.game.state.restart();
     }
     newLevel()

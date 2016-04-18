@@ -87,6 +87,7 @@ var mainState = (function (_super) {
     };
     mainState.prototype.finishGame = function () {
         this.game.LEVEL = 1;
+        this.game.SCORE = 0;
         this.game.state.restart();
     };
     mainState.prototype.newLevel = function () {
