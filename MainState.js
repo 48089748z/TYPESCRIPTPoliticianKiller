@@ -3,95 +3,6 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
-/// <reference path="phaser/phaser.d.ts"/>
-var MyGame;
-(function (MyGame) {
-    window.onload = function () { new PoliticianKiller(); };
-    var PoliticianKiller = (function (_super) {
-        __extends(PoliticianKiller, _super);
-        function PoliticianKiller() {
-            _super.call(this, 1800, 900, Phaser.CANVAS, 'gameDiv');
-            this.LEVEL = 1;
-            this.SCORE = 0;
-            this.TOTAL_KILLED = 0;
-            this.TAKEN_COINS = 0;
-            this.PLAYER_MAX_VELOCITY = 600;
-            this.PLAYER_VELOCITY = 400;
-            this.PLAYER_DRAG = 300;
-            this.PLAYER_LIVES = 3;
-            this.PLAYER_ACCELERATION = 500;
-            this.FIRE_RATE = 200;
-            this.NEXT_FIRE = 0;
-            this.BULLET_SPEED = 600;
-            this.state.add('start', MyGame.StartState);
-            this.state.add('menu', MyGame.MenuState);
-            this.state.add('main', MyGame.mainState);
-            this.state.start('start');
-        }
-        return PoliticianKiller;
-    })(Phaser.Game);
-    MyGame.PoliticianKiller = PoliticianKiller;
-})(MyGame || (MyGame = {}));
-/**
- * Created by 48089748z on 21/04/16.
- */
-var MyGame;
-(function (MyGame) {
-    var MenuState = (function (_super) {
-        __extends(MenuState, _super);
-        function MenuState() {
-            _super.apply(this, arguments);
-        }
-        MenuState.prototype.preload = function () {
-            _super.prototype.preload.call(this);
-            var loadingText = this.add.text(this.world.centerX, this.world.centerY - 100, 'LOADING ...', { font: '50px Arial', fill: '#000000' });
-            loadingText.anchor.setTo(0.5, 0.5);
-            var loading = this.add.sprite(this.world.centerX, this.world.centerY, 'loading');
-            loading.anchor.setTo(0.5, 0.5);
-            this.load.image('lower_wall', 'assets/lower_wall-100x100.png');
-            this.load.image('upper_wall', 'assets/upper_wall-100x100.png');
-            this.load.image('player', 'assets/player-133x100.png');
-            this.load.image('red_explosion', 'assets/explosion-72x60.png');
-            this.load.image('bullet', 'assets/bullet-32x20.png');
-            this.load.image('obstacle', 'assets/stone-60x60.png');
-            this.load.image('coin', 'assets/coin-60x60.png');
-            this.load.image('pablo', 'assets/pablo-50x50.png');
-            this.load.audio('enemyHitPlayer', 'assets/cuidao.wav');
-            this.physics.startSystem(Phaser.Physics.ARCADE);
-        };
-        MenuState.prototype.create = function () {
-            _super.prototype.create.call(this);
-            var playerUsername = prompt("Please enter your Username");
-            localStorage.setItem("username", playerUsername);
-            this.game.state.start('main');
-        };
-        return MenuState;
-    })(Phaser.State);
-    MyGame.MenuState = MenuState;
-})(MyGame || (MyGame = {}));
-/**
- * Created by 48089748z on 21/04/16.
- */
-var MyGame;
-(function (MyGame) {
-    var StartState = (function (_super) {
-        __extends(StartState, _super);
-        function StartState() {
-            _super.apply(this, arguments);
-        }
-        StartState.prototype.preload = function () {
-            _super.prototype.preload.call(this);
-            this.load.image('loading', 'assets/loading-436x140.png');
-        };
-        StartState.prototype.create = function () {
-            _super.prototype.create.call(this);
-            this.stage.backgroundColor = "#ffffff";
-            this.game.state.start('menu');
-        };
-        return StartState;
-    })(Phaser.State);
-    MyGame.StartState = StartState;
-})(MyGame || (MyGame = {}));
 /**
  * Created by 48089748z on 21/04/16.
  */
@@ -143,8 +54,6 @@ var MyGame;
         };
         mainState.prototype.politicianHitPlayer = function (player, politician) {
             politician.kill();
-            this.game.cuidaoSound = this.game.add.audio('enemyHitPlayer');
-            this.game.cuidaoSound.play();
             this.game.SCORE -= 100;
             player.health -= 1;
             this.game.scoreText.setText("PLAYER: " + this.game.player.NAME + "\nSCORE: " + this.game.SCORE);
@@ -201,7 +110,7 @@ var MyGame;
             for (var x = 0; x < this.game.LEVEL * 10; x++) {
                 var randomX = this.game.rnd.integerInRange(300, 1500);
                 var randomY = this.game.rnd.integerInRange(200, 700);
-                var politician = new MyGame.Politician(this.game, randomX, randomY, 'pablo', 0);
+                var politician = new Politician(this.game, randomX, randomY, 'pablo', 0);
                 this.game.politicians.add(politician);
             }
         };
@@ -309,149 +218,4 @@ var MyGame;
     })(Phaser.State);
     MyGame.mainState = mainState;
 })(MyGame || (MyGame = {}));
-/**
- * Created by 48089748z on 21/04/16.
- */
-var MyGame;
-(function (MyGame) {
-    var Player = (function (_super) {
-        __extends(Player, _super);
-        function Player(name, startingLives, game, x, y, key, frame) {
-            _super.call(this, game, x, y, key, frame);
-            this.game = game;
-            this.NAME = name;
-            this.anchor.setTo(0.5, 0.5);
-            this.health = startingLives;
-            this.game.physics.enable(this, Phaser.Physics.ARCADE);
-            this.body.velocity.setTo(this.game.PLAYER_VELOCITY, this.game.PLAYER_VELOCITY);
-            this.body.maxVelocity.setTo(this.game.PLAYER_MAX_VELOCITY, this.game.PLAYER_MAX_VELOCITY);
-            this.body.collideWorldBounds = true;
-            this.body.drag.setTo(this.game.PLAYER_DRAG, this.game.PLAYER_DRAG);
-        }
-        Player.prototype.update = function () {
-            _super.prototype.update.call(this);
-            if (this.game.cursors.left.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.A)) {
-                this.game.player.body.acceleration.x = -this.game.PLAYER_ACCELERATION;
-            }
-            else if (this.game.cursors.right.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.D)) {
-                this.game.player.body.acceleration.x = this.game.PLAYER_ACCELERATION;
-            }
-            else if (this.game.cursors.up.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.W)) {
-                this.game.player.body.acceleration.y = -this.game.PLAYER_ACCELERATION;
-            }
-            else if (this.game.cursors.down.isDown || this.game.input.keyboard.isDown(Phaser.Keyboard.S)) {
-                this.game.player.body.acceleration.y = this.game.PLAYER_ACCELERATION;
-            }
-            else {
-                this.game.player.body.acceleration.x = 0;
-                this.game.player.body.acceleration.y = 0;
-            }
-        };
-        return Player;
-    })(Phaser.Sprite);
-    MyGame.Player = Player;
-})(MyGame || (MyGame = {}));
-/**
- * Created by 48089748z on 21/04/16.
- */
-var MyGame;
-(function (MyGame) {
-    var Coin = (function (_super) {
-        __extends(Coin, _super);
-        function Coin(game, x, y, key, frame) {
-            _super.call(this, game, x, y, key, frame);
-            this.anchor.setTo(0.5, 0.5);
-            this.game.physics.enable(this, Phaser.Physics.ARCADE);
-        }
-        Coin.prototype.update = function () {
-            _super.prototype.update.call(this);
-            this.angle = this.angle + 1;
-        };
-        return Coin;
-    })(Phaser.Sprite);
-    MyGame.Coin = Coin;
-})(MyGame || (MyGame = {}));
-/**
- * Created by 48089748z on 21/04/16.
- */
-var MyGame;
-(function (MyGame) {
-    var Explosion = (function (_super) {
-        __extends(Explosion, _super);
-        function Explosion(game) {
-            _super.call(this, game, 1000, 500, 'red_explosion', 0);
-            this.game = game;
-            this.kill();
-        }
-        Explosion.prototype.doExplode = function (x, y) {
-            var deadExplosion = this.game.explosions.getFirstDead();
-            if (deadExplosion) {
-                deadExplosion.reset(x - 30, y - 30);
-                this.game.add.tween(deadExplosion).to({ alpha: 0 }, 600, Phaser.Easing.Linear.None, true);
-            }
-        };
-        return Explosion;
-    })(Phaser.Sprite);
-    MyGame.Explosion = Explosion;
-})(MyGame || (MyGame = {}));
-/**
- * Created by 48089748z on 21/04/16.
- */
-var MyGame;
-(function (MyGame) {
-    var Wall = (function (_super) {
-        __extends(Wall, _super);
-        function Wall(game, x, y, key, frame) {
-            _super.call(this, game, x, y, key, frame);
-            this.game.physics.enable(this, Phaser.Physics.ARCADE);
-            this.body.immovable = true;
-        }
-        return Wall;
-    })(Phaser.Sprite);
-    MyGame.Wall = Wall;
-})(MyGame || (MyGame = {}));
-/**
- * Created by 48089748z on 21/04/16.
- */
-var MyGame;
-(function (MyGame) {
-    var Bullet = (function (_super) {
-        __extends(Bullet, _super);
-        function Bullet(game, key) {
-            _super.call(this, game, 0, 0, key, 0);
-            this.game = game;
-            this.explosion = new MyGame.Explosion(this.game);
-            this.anchor.setTo(0.5, 0.5);
-            this.scale.setTo(0.5, 0.5);
-            this.checkWorldBounds = true;
-            this.events.onOutOfBounds.add(this.killBullet, this);
-            this.alive = false;
-        }
-        Bullet.prototype.killBullet = function (bullet) { bullet.kill(); };
-        return Bullet;
-    })(Phaser.Sprite);
-    MyGame.Bullet = Bullet;
-})(MyGame || (MyGame = {}));
-/**
- * Created by 48089748z on 21/04/16.
- */
-var MyGame;
-(function (MyGame) {
-    var Politician = (function (_super) {
-        __extends(Politician, _super);
-        function Politician(game, x, y, key, frame) {
-            _super.call(this, game, x, y, key, frame);
-            this.ENEMY_SPEED = 100;
-            this.GAME = game;
-            this.anchor.setTo(0.5, 0.5);
-            this.game.physics.enable(this, Phaser.Physics.ARCADE);
-            this.body.collideWorldBounds = true;
-            this.body.bounce.setTo(1);
-            this.body.velocity.setTo(this.ENEMY_SPEED, this.ENEMY_SPEED);
-            this.body.angle = this.game.rnd;
-        }
-        return Politician;
-    })(Phaser.Sprite);
-    MyGame.Politician = Politician;
-})(MyGame || (MyGame = {}));
-//# sourceMappingURL=main.js.map
+//# sourceMappingURL=MainState.js.map

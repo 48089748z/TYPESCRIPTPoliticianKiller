@@ -3,9 +3,19 @@
     "module": "commonjs",
     "sourceMap": true,
     "target": "es5",
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "out": "main.js"
   },
   "files": [
-    "main.ts"
+    "main.ts",
+    "MenuState.ts",
+    "StartState.ts",
+    "MainState.ts",
+    "Player.ts",
+    "Coin.ts",
+    "Explosion.ts",
+    "Wall.ts",
+    "Bullet.ts",
+    "Politician.ts"
   ]
 }
